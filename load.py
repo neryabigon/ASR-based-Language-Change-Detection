@@ -1,5 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
+from datasets import load_from_disk
+
+print("----------------- Loading Datasets... -----------------")
+data = load_from_disk('pickles/merged_dataset')
+print("----------------- Loading Datasets complete. -----------------\n\n")
+
+print(data.column_names)
+print(data[0])
 
 df = pd.read_pickle('pickles/cosine_similarity/russian_portuguese_train.pickle')
 ls = df['cos_sim']
