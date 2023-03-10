@@ -1,16 +1,9 @@
 import pandas as pd
-from datasets import load_dataset, load_metric, Audio, ClassLabel, load_from_disk, Features, Value, concatenate_datasets
-from transformers import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor, Wav2Vec2Processor, Wav2Vec2ForCTC
+from datasets import Audio, Features, Value, Dataset
 import torch
 import torchaudio
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
-import random
 import numpy as np
-from IPython.display import display, HTML
 import re
-import json
-from torch.utils.tensorboard import SummaryWriter
 import pyarabic.araby as araby
 from unidecode import unidecode
 
@@ -34,84 +27,69 @@ print(f'Cuda Available = {torch.cuda.is_available()}\n\n')
 print("Loading pairs...")
 df = pd.read_pickle('pickles/cosine_similarity/arabic_portuguese_train.pickle')
 
-# get the sentences with a cosine similarity of 0.56 and up
+# get the sentences with a cosine similarity of 0.56 and up (in the sequence it will be -0.16 and down)
 print("Filtering dataset...")
 df = df[df['cos_sim'] >= 0.56]
 
 # get 40000 random pairs
 print("Sampling dataset at random...")
-df = df.sample(n=10, random_state=1)
-# df = df.sample(n=40000, random_state=1)
+# df = df.sample(n=100, random_state=1)
+df = df.sample(n=40000, random_state=1)
 
-print("----------------- Loading Datasets... -----------------")
+# load the sentences
+df_ar_sentences = pd.read_pickle('pickles/embedding/arabic/arabic_train.pickle')
+df_pt_sentences = pd.read_pickle('pickles/embedding/portuguese/portuguese_train.pickle')
+
+# create two extra columns in the dataset, one for the arabic sentence and one for the portuguese sentence
+print("Adding sentences to dataset...")
+# add Arabic sentences to dataset
+arabic_sentences_dict = dict(zip(df_ar_sentences['path'].values, df_ar_sentences['sentence'].values))
+df['arabic_sentence'] = df[PATH_1].map(arabic_sentences_dict)
+
+# add Portuguese sentences to dataset
+portuguese_sentences_dict = dict(zip(df_pt_sentences['path'].values, df_pt_sentences['sentence'].values))
+df['portuguese_sentence'] = df[PATH_2].map(portuguese_sentences_dict)
+dataset = Dataset.from_pandas(df)
+
+# append to each element in 'arabic' '/home/or/Desktop/arabic_new_dataset/train/',
+# and to each element in 'portuguese' '/home/or/Desktop/portu_dataset/augmentations/train/'
+print("Appending paths...")
+
+
+def append_path(example):
+    example['arabic'] = '/home/or/Desktop/arabic_new_dataset/train/' + example['arabic']
+    example['portuguese'] = '/home/or/Desktop/portu_dataset/augmentations/train/' + example['portuguese']
+    return example
+
+
+dataset = dataset.map(append_path)
+
+# drop the column 'cos_sim'
+print("Dropping column 'cos_sim'...")
+dataset = dataset.remove_columns(['cos_sim'])
 features = Features(
     {
-        "client_id": Value("string"),
-        "path": Value("string"),
-        "audio": Audio(sampling_rate=48_000),
-        "sentence": Value("string"),
-        "up_votes": Value("int64"),
-        "down_votes": Value("int64"),
-        "age": Value("string"),
-        "gender": Value("string"),
-        "accents": Value("string"),
-        "locale": Value("string"),
-        "segment": Value("string"),
+        "arabic": Audio(sampling_rate=48_000),
+        "portuguese": Audio(sampling_rate=48_000),
+        "arabic_sentence": Value("string"),
+        "portuguese_sentence": Value("string"),
+        "__index_level_0__": Value("string"),
     }
 )
 
-# load the dataset
-dataset_1 = load_dataset('csv', data_files={'train': 'train.csv', },
-                         data_dir='/home/or/Desktop/language-and-speaker-change-detection-based-on-automatic-speech'
-                                  '-recognition-methods-/datasets csv/arabic')
-dataset_2 = load_dataset('csv', data_files={'train': 'train.csv', },
-                         data_dir='/home/or/Desktop/language-and-speaker-change-detection-based-on-automatic-speech'
-                                  '-recognition-methods-/datasets csv/portuguese')
-
-# cast the features
-dataset_1 = dataset_1.cast(features)
-dataset_2 = dataset_2.cast(features)
-
-# remove the columns
-dataset_1 = dataset_1.remove_columns(
-    ["accents", "age", "client_id", "down_votes", "gender", "locale", "segment", "up_votes"])
-dataset_2 = dataset_2.remove_columns(
-    ["accents", "age", "client_id", "down_votes", "gender", "locale", "segment", "up_votes"])
-
-dataset_1 = dataset_1['train']
-dataset_2 = dataset_2['train']
-print("\n----------------- Loading Datasets complete. -----------------")
-
-# take only the lines that are in the 40000 random pairs from the first stage
-print("Loading chosen pairs from the dataset...")
-dataset_1 = dataset_1.filter(lambda example: example['path'] in df[PATH_1].values)
-dataset_2 = dataset_2.filter(lambda example: example['path'] in df[PATH_2].values)
-
-# loop through df and print the line that wasn't found in the dataset
-for index, row in df.iterrows():
-    if row[PATH_1] not in dataset_1['path']:
-        print(row[PATH_1])
-    if row[PATH_2] not in dataset_2['path']:
-        print(row[PATH_2])
-
-# Rename the columns in dataset_2 to avoid duplicates
-dataset_2 = dataset_2.rename_column("path", "path_2")
-dataset_2 = dataset_2.rename_column("audio", "audio_2")
-dataset_2 = dataset_2.rename_column("sentence", "sentence_2")
-
-# Concatenate the datasets
-dataset = concatenate_datasets([dataset_1, dataset_2], axis=1)
+dataset = dataset.cast(features)
 
 
 # merge the two datasets into one dataset according to the way we stated in the beginning of the script: audio +
 # pause + audio, sentence + space + sentence
-
 def merge(sample):
     # concatenate the audio
-    sample['audio'] = torch.cat((torch.from_numpy(sample['audio']['array']), torch.zeros(24000),
-                                 torch.from_numpy(sample['audio_2']['array'])), dim=0)
+    audio_array = np.asarray(sample['arabic']['array'])
+    audio_array_2 = np.asarray(sample['portuguese']['array'])
+    sample['arabic'] = torch.cat((torch.from_numpy(audio_array), torch.zeros(24000),
+                                  torch.from_numpy(audio_array_2)), dim=0)
     # concatenate the sentence
-    sample['sentence'] = sample['sentence'] + ' ' + sample['sentence_2']
+    sample['arabic_sentence'] = sample['arabic_sentence'] + ' ' + sample['portuguese_sentence']
     return sample
 
 
@@ -119,7 +97,11 @@ def merge(sample):
 dataset = dataset.map(merge)
 
 # remove the columns that we don't need
-dataset = dataset.remove_columns(["path_2", "audio_2", "sentence_2"])
+dataset = dataset.remove_columns(["portuguese", "portuguese_sentence", "__index_level_0__"])
+
+# rename the columns
+dataset = dataset.rename_column("arabic", "audio")
+dataset = dataset.rename_column("arabic_sentence", "sentence")
 
 # save the dataset
 print("Saving dataset to disk...")

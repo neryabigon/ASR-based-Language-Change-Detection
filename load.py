@@ -4,11 +4,14 @@ import os
 from datasets import load_from_disk
 
 print("----------------- Loading Datasets... -----------------")
-data = load_from_disk('pickles/merged_dataset')
+data = load_from_disk('pickles/merged_dataset/arabic_portuguese')
 print("----------------- Loading Datasets complete. -----------------\n\n")
 
-print(data.column_names)
-print(data[0])
+# print data['sentence'] as a nice table
+for i in range(10):
+    print(data[i]['sentence'])
+
+
 
 df = pd.read_pickle('pickles/cosine_similarity/russian_portuguese_train.pickle')
 ls = df['cos_sim']
