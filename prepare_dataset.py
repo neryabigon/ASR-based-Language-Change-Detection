@@ -21,7 +21,7 @@ PATH_1 = 'arabic'
 PATH_2 = 'portuguese'
 
 print("----------------- Checking if cuda is available... -----------------")
-print(f'Cuda Available = {torch.cuda.is_available()}\n\n')
+print(f'Cuda Available = {torch.cuda.is_available()}\n')
 
 # load the dataset
 print("Loading pairs...")
@@ -29,7 +29,7 @@ df = pd.read_pickle('pickles/cosine_similarity/arabic_portuguese_train.pickle')
 
 # get the sentences with a cosine similarity of 0.56 and up (in the sequence it will be -0.16 and down)
 print("Filtering dataset...")
-df = df[df['cos_sim'] >= 0.56]
+df = df[df['cos_sim'] <= -0.16]
 
 # get 40000 random pairs
 print("Sampling dataset at random...")
@@ -49,6 +49,7 @@ df['arabic_sentence'] = df[PATH_1].map(arabic_sentences_dict)
 # add Portuguese sentences to dataset
 portuguese_sentences_dict = dict(zip(df_pt_sentences['path'].values, df_pt_sentences['sentence'].values))
 df['portuguese_sentence'] = df[PATH_2].map(portuguese_sentences_dict)
+
 dataset = Dataset.from_pandas(df)
 
 # append to each element in 'arabic' '/home/or/Desktop/arabic_new_dataset/train/',
@@ -79,6 +80,12 @@ features = Features(
 
 dataset = dataset.cast(features)
 
+# divide the dataset into four datasets, so it will be easier to work with
+part_1 = dataset.select(range(0, 10000))
+part_2 = dataset.select(range(10000, 20000))
+part_3 = dataset.select(range(20000, 30000))
+part_4 = dataset.select(range(30000, 40000))
+
 
 # merge the two datasets into one dataset according to the way we stated in the beginning of the script: audio +
 # pause + audio, sentence + space + sentence
@@ -93,17 +100,37 @@ def merge(sample):
     return sample
 
 
-# merge the two datasets
-dataset = dataset.map(merge)
-
-# remove the columns that we don't need
-dataset = dataset.remove_columns(["portuguese", "portuguese_sentence", "__index_level_0__"])
-
-# rename the columns
-dataset = dataset.rename_column("arabic", "audio")
-dataset = dataset.rename_column("arabic_sentence", "sentence")
-
+# merge
+print("Merging datasets...")
+part_1 = part_1.map(merge)
 # save the dataset
 print("Saving dataset to disk...")
-dataset.save_to_disk('pickles/merged_dataset/arabic_portuguese')
-print("Done!")
+part_1.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_1')
+del part_1
+
+part_2 = part_2.map(merge)
+# save the dataset
+print("Saving dataset to disk...")
+part_2.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_2')
+del part_2
+part_3 = part_3.map(merge)
+# save the dataset
+print("Saving dataset to disk...")
+part_3.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_3')
+del part_3
+part_4 = part_4.map(merge)
+# save the dataset
+print("Saving dataset to disk...")
+part_4.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_4')
+del part_4
+# remove the columns that we don't need
+# dataset = dataset.remove_columns(["portuguese", "portuguese_sentence", "__index_level_0__"])
+#
+# # rename the columns
+# dataset = dataset.rename_column("arabic", "audio")
+# dataset = dataset.rename_column("arabic_sentence", "sentence")
+#
+# # save the dataset
+# print("Saving dataset to disk...")
+# dataset.save_to_disk('pickles/merged_dataset/arabic_portuguese/low_cos_sim')
+# print("Done!")
