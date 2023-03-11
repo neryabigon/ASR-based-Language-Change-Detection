@@ -40,6 +40,29 @@ df = df.sample(n=40000, random_state=1)
 df_ar_sentences = pd.read_pickle('pickles/embedding/arabic/arabic_train.pickle')
 df_pt_sentences = pd.read_pickle('pickles/embedding/portuguese/portuguese_train.pickle')
 
+# chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\“\%\‘\”\�\]'
+chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\“\%\‘\”\�؟]'
+
+# أنت لديك رؤية أفضل منى؟
+
+def remove_special_characters_ar(batch):
+    batch["sentence"] = re.sub(chars_to_ignore_regex, '', batch["sentence"]).lower() + " "
+    batch["sentence"] = araby.strip_diacritics(batch["sentence"])  # remove pronunciation signs in arabic
+    return batch
+
+
+def remove_special_characters_uni(batch):
+    batch["sentence"] = re.sub(chars_to_ignore_regex, '', batch["sentence"]).lower() + " "
+    batch["sentence"] = unidecode(batch["sentence"])  # remove pronunciation signs in portuguese
+    return batch
+
+
+# remove special characters from the sentences in df_ar_sentences, and from the sentences in df_pt_sentences
+print("Removing special characters from sentences...")
+# remove special characters from the sentences in df_ar_sentences
+df_ar_sentences = df_ar_sentences.apply(remove_special_characters_ar, axis=1)
+df_pt_sentences = df_pt_sentences.apply(remove_special_characters_uni, axis=1)
+
 # create two extra columns in the dataset, one for the arabic sentence and one for the portuguese sentence
 print("Adding sentences to dataset...")
 # add Arabic sentences to dataset
@@ -105,23 +128,23 @@ print("Merging datasets...")
 part_1 = part_1.map(merge)
 # save the dataset
 print("Saving dataset to disk...")
-part_1.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_1')
+part_1.save_to_disk('/media/or/Extreme SSD/wav2vec2/temp/part_1')
 del part_1
 
 part_2 = part_2.map(merge)
 # save the dataset
 print("Saving dataset to disk...")
-part_2.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_2')
+part_2.save_to_disk('/media/or/Extreme SSD/wav2vec2/temp/part_2')
 del part_2
 part_3 = part_3.map(merge)
 # save the dataset
 print("Saving dataset to disk...")
-part_3.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_3')
+part_3.save_to_disk('/media/or/Extreme SSD/wav2vec2/temp/part_3')
 del part_3
 part_4 = part_4.map(merge)
 # save the dataset
 print("Saving dataset to disk...")
-part_4.save_to_disk('pickles/merged_dataset/arabic_portuguese/part_4')
+part_4.save_to_disk('/media/or/Extreme SSD/wav2vec2/temp/part_4')
 del part_4
 # remove the columns that we don't need
 # dataset = dataset.remove_columns(["portuguese", "portuguese_sentence", "__index_level_0__"])
