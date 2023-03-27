@@ -16,13 +16,14 @@ import pyarabic.araby as araby
 from unidecode import unidecode
 
 # the writer is responsible for tensorboard logging
-writer = SummaryWriter(comment="_arabic_portuguese_high")
+writer = SummaryWriter(comment="_arabic_portuguese_high_reverse")
 
 print("----------------- Checking if cuda is available... -----------------")
 print(f'Cuda Available = {torch.cuda.is_available()}\n\n')
 
 print("----------------- Loading Datasets complete. -----------------")
-data = load_from_disk('pickles/merged_dataset/arabic_portuguese/high_cos_sim')
+# data = load_from_disk('pickles/merged_dataset/russian_portuguese/try/ru_pt-high_5000')
+data = load_from_disk('pickles/merged_dataset/arabic_portuguese/try/ar_pt-high_5000')
 print("----------------- Loading Datasets complete. -----------------\n")
 # small dataset for testing purposes only (10 samples)
 # data = data.select(range(100))
@@ -31,19 +32,19 @@ print("----------------- Loading Datasets complete. -----------------\n")
 # split the dataset to train and test sets (90% train, 10% test) randomly
 print("----------------- Splitting dataset to train and test sets... -----------------")
 splits1 = data.train_test_split(test_size=0.1, seed=42)
+del data
 
 train = splits1['train']
 test = splits1['test']
 # save the test set for later evaluation
-test.save_to_disk('pickles/merged_dataset/arabic_portuguese/test_high')
+test.save_to_disk('pickles/merged_dataset/arabic_portuguese/test_high_reverse')
+del test
+del splits1
 # split the train set to train and validation sets (80% from 40000 train, 10% from 40000 validation) randomly
 splits2 = train.train_test_split(test_size=0.115, seed=42)
 train = splits2['train']
 validation = splits2['test']
-
-del splits1
 del splits2
-del data
 
 
 def extract_all_chars(batch):
@@ -53,9 +54,9 @@ def extract_all_chars(batch):
 
 
 print("\n----------------- Extracting all characters... -----------------")
-vocab_train = train.map(extract_all_chars, batched=True, batch_size=-1, keep_in_memory=True,
+vocab_train = train.map(extract_all_chars, batched=True, batch_size=128, keep_in_memory=True,
                         remove_columns=train.column_names)
-vocab_test = validation.map(extract_all_chars, batched=True, batch_size=-1, keep_in_memory=True,
+vocab_test = validation.map(extract_all_chars, batched=True, batch_size=128, keep_in_memory=True,
                             remove_columns=validation.column_names)
 print("----------------- Extracting all characters complete. -----------------\n\n")
 
@@ -78,12 +79,12 @@ print(f'Vocab_len: {len(vocab_dict)}')
 print("----------------- Preparing vocab complete. -----------------\n\n")
 
 print("----------------- Saving vocab to jason... -----------------")
-with open('vocab/arabic_portu_high.json', 'w') as vocab_file:
+with open('vocab/arabic_portu_high_reverse.json', 'w') as vocab_file:
     json.dump(vocab_dict, vocab_file)
 
 print("----------------- Saving vocab to jason complete. -----------------\n\n")
 
-tokenizer = Wav2Vec2CTCTokenizer("./vocab/arabic_portu_high.json", unk_token="[UNK]", pad_token="[PAD]",
+tokenizer = Wav2Vec2CTCTokenizer("./vocab/arabic_portu_high_reverse.json", unk_token="[UNK]", pad_token="[PAD]",
                                  word_delimiter_token="|")
 
 feature_extractor = Wav2Vec2FeatureExtractor(feature_size=1, sampling_rate=16000, padding_value=0.0, do_normalize=True,
@@ -108,15 +109,15 @@ validation = validation.map(prepare_dataset, remove_columns=validation.column_na
 print("\n\n----------------- Preparing datasets complete. -----------------\n\n")
 
 print("----------------- saving datasets... -----------------")
-train.save_to_disk('pickles/merged_dataset/arabic_portuguese/train_high')
-validation.save_to_disk('pickles/merged_dataset/arabic_portuguese/validation_high')
+train.save_to_disk('pickles/merged_dataset/arabic_portuguese/train_high_reverse')
+validation.save_to_disk('pickles/merged_dataset/arabic_portuguese/validation_high_reverse')
 print("----------------- saving datasets complete. -----------\n\n")
 
 
-#  Loading from file
+# #  Loading from file
 # print("----------------- Loading Datasets... -----------------")
-# train = load_from_disk('pickles/merged_dataset/arabic_portuguese/train_high')
-# validation = load_from_disk('pickles/merged_dataset/arabic_portuguese/validation_high')
+# train = load_from_disk('pickles/merged_dataset/arabic_portuguese/train_high_reverse')
+# validation = load_from_disk('pickles/merged_dataset/arabic_portuguese/validation_high_reverse')
 # print("----------------- Loading Datasets complete. ----------\n\n")
 @dataclass
 class DataCollatorCTCWithPadding:
@@ -225,38 +226,39 @@ print("----------------- Loading Model complete. -----------------\n\n")
 model.freeze_feature_encoder()
 
 model.gradient_checkpointing_enable()
-# training_args = TrainingArguments(
-#     output_dir="arabic_portuguese_high",
-#     group_by_length=True,
-#     per_device_train_batch_size=8,  # if cuda is out of memory try decreasing batch size by half (to 8)
-#     gradient_accumulation_steps=2,
-#     evaluation_strategy="steps",
-#     num_train_epochs=10,
-#     fp16=True,
-#     save_steps=10,  # change to num_of_samples / batch size to save on epoch
-#     eval_steps=5,
-#     logging_steps=3,
-#     learning_rate=3e-4,
-#     warmup_steps=1,
-#     save_total_limit=10,
-#     report_to='tensorboard'
-# )
+
 training_args = TrainingArguments(
-    output_dir="arabic_portuguese_high",
+    output_dir="arabic_portuguese_high_reverse",
     group_by_length=True,
-    per_device_train_batch_size=8,  # if cuda is out of memory try decreasing batch size by half (to 8)
+    per_device_train_batch_size=8,  # if cuda is out of memory try decreasing batch size by half
     gradient_accumulation_steps=2,
     evaluation_strategy="steps",
     num_train_epochs=10,
     fp16=True,
-    save_steps=1991,  # change to num_of_samples / batch size to save on epoch
+    save_steps=248,  # change to num_of_samples / batch size to save on epoch
     eval_steps=100,
     logging_steps=10,
     learning_rate=3e-4,
-    warmup_steps=500,
+    warmup_steps=200,
     save_total_limit=10,
     report_to='tensorboard'
 )
+# training_args = TrainingArguments(
+#     output_dir="arabic_portuguese_high",
+#     group_by_length=True,
+#     per_device_train_batch_size=2,  # if cuda is out of memory try decreasing batch size by half
+#     gradient_accumulation_steps=2,
+#     evaluation_strategy="steps",
+#     num_train_epochs=10,
+#     fp16=True,
+#     save_steps=3982,  # change to num_of_samples / batch size to save on epoch
+#     eval_steps=100,
+#     logging_steps=10,
+#     learning_rate=3e-4,
+#     warmup_steps=500,
+#     save_total_limit=10,
+#     report_to='tensorboard'
+# )
 
 trainer = Trainer(
     model=model,
@@ -275,3 +277,4 @@ print("----------------- Training complete. -----------------\n\n")
 
 writer.close()
 # To run the tensorboard run the following command in the folder containing the checkpoints: tensorboard --logdir=runs
+

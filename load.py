@@ -2,29 +2,31 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from datasets import load_from_disk, concatenate_datasets
+#
+# print("----------------- Loading Datasets... -----------------")
+# dataset = load_from_disk('pickles/merged_dataset/arabic_portuguese/try/ar_pt-high_1000')
+# # data1 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_1')
+# # data2 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_2')
+# # data3 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_3')
+# # data4 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_4')
+# print("----------------- Loading Datasets complete. -----------------\n\n")
+#
+# print("----------------- Merging Datasets... -----------------")
+# # dataset = concatenate_datasets([data1, data2, data3, data4])
+# # remove the columns that we don't need
+# dataset = dataset.remove_columns(["portuguese", "portuguese_sentence", "__index_level_0__"])
+#
+# # rename the columns
+# dataset = dataset.rename_column("arabic", "audio")
+# dataset = dataset.rename_column("arabic_sentence", "sentence")
+#
+# # save the dataset
+# print("Saving dataset to disk...")
+# dataset.save_to_disk('pickles/merged_dataset/arabic_portuguese/try/ar_pt-high_1000_ready')
+# # dataset.save_to_disk('pickles/merged_dataset/arabic_portuguese/low_cos_sim')
+# print("Done!")
 
-print("----------------- Loading Datasets... -----------------")
-data1 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_1')
-data2 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_2')
-data3 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_3')
-data4 = load_from_disk('/media/or/Extreme SSD/wav2vec2/temp/part_4')
-print("----------------- Loading Datasets complete. -----------------\n\n")
-
-print("----------------- Merging Datasets... -----------------")
-dataset = concatenate_datasets([data1, data2, data3, data4])
-# remove the columns that we don't need
-dataset = dataset.remove_columns(["portuguese", "portuguese_sentence", "__index_level_0__"])
-
-# rename the columns
-dataset = dataset.rename_column("arabic", "audio")
-dataset = dataset.rename_column("arabic_sentence", "sentence")
-
-# save the dataset
-print("Saving dataset to disk...")
-dataset.save_to_disk('pickles/merged_dataset/arabic_portuguese/low_cos_sim')
-print("Done!")
-
-df = pd.read_pickle('pickles/cosine_similarity/russian_portuguese_train.pickle')
+df = pd.read_pickle('pickles/cosine_similarity/russian_spanish_test.pickle')
 ls = df['cos_sim']
 
 count75 = 0

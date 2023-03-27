@@ -9,15 +9,22 @@ import time
 from tqdm import tqdm
 
 # change the languages before running the script
-LANG_1 = 'russian'
+LANG_1 = 'spanish'
 LANG_2 = 'portuguese'
 
 print('---------------- loading data from pickle... ------------------')
-df_lang_1 = pd.read_pickle('pickles/embedding/russian/russian_train.pickle')
+df_lang_1 = pd.read_pickle('pickles/embedding/spanish/spanish_train.pickle')
 df_lang_2 = pd.read_pickle('pickles/embedding/portuguese/portuguese_train.pickle')
 print('\n---------------- loading data from pickle complete. ------------------\n')
 
 start_time = time.time()  # start timer
+# take only the first 5000 rows from each dataframe and save a new csv files for each
+# df_lang_1 = df_lang_1[:5000]
+# df_lang_2 = df_lang_2[:5000]
+#
+# df_lang_1.to_pickle('pickles/embedding/russian/russian_test_5000.pickle')
+# df_lang_2.to_pickle('pickles/embedding/portuguese/portuguese_validation_5000.pickle')
+
 
 print(f'df_1_len: {len(df_lang_1.index)}')
 print(f'df_2_len: {len(df_lang_2.index)}')
@@ -84,6 +91,6 @@ end_time = time.time()
 print('Time taken:', end_time - start_time)
 
 print('-------------- writing to pickle... ------------------')
-with open('pickles/cosine_similarity/russian_portuguese_train.pickle', 'wb') as f:
+with open('pickles/cosine_similarity/spanish_portuguese_train.pickle', 'wb') as f:
     pickle.dump(df_res, f)
 print('-------------- writing to pickle complete. ------------------\n')

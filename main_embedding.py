@@ -8,12 +8,12 @@ from numpy.linalg import norm
 import pickle
 
 print('---------------- loading data from csv... ------------------')
-df = pd.read_csv("datasets csv/portuguese/test.csv")
+df = pd.read_csv("datasets csv/spanish/chosen_train.csv")
 print('---------------- loading data from csv complete. ------------------\n')
 
 print('---------------- removing columns... ------------------')
 del df['client_id']
-del df['audio']  # russian csv doesn't contains the 'audio' column
+# del df['audio']  # russian csv doesn't contains the 'audio' column
 del df['up_votes']
 del df['down_votes']
 del df['age']
@@ -55,6 +55,6 @@ print(df_res[:5])
 print('-------------- preparing dataframe complete. ------------------\n')
 
 print('-------------- writing to pickle... ------------------')
-with open('pickles/embedding/portuguese/portuguese_test.pickle', 'wb') as f:
+with open('pickles/embedding/spanish/spanish_train.pickle', 'wb') as f:
     pickle.dump(df_res, f)
 print('-------------- writing to pickle complete. ------------------\n')
