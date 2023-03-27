@@ -12,40 +12,23 @@ from IPython.display import display, HTML
 import re
 import json
 from torch.utils.tensorboard import SummaryWriter
-import pyarabic.araby as araby
 from unidecode import unidecode
 
 # the writer is responsible for tensorboard logging
-writer = SummaryWriter(comment="_arabic_portuguese_high_reverse")
+writer = SummaryWriter(comment="_russian_portuguese_high")
 
 print("----------------- Checking if cuda is available... -----------------")
 print(f'Cuda Available = {torch.cuda.is_available()}\n\n')
 
 print("----------------- Loading Datasets complete. -----------------")
-# data = load_from_disk('pickles/merged_dataset/russian_portuguese/try/ru_pt-high_5000')
-data = load_from_disk('pickles/merged_dataset/arabic_portuguese/try/ar_pt-high_5000')
+train = load_from_disk('pickles/merged_dataset/russian_portuguese/high/train')
+validation = load_from_disk('pickles/merged_dataset/russian_portuguese/high/validation')
 print("----------------- Loading Datasets complete. -----------------\n")
+
+
 # small dataset for testing purposes only (10 samples)
-# data = data.select(range(100))
-
-
-# split the dataset to train and test sets (90% train, 10% test) randomly
-print("----------------- Splitting dataset to train and test sets... -----------------")
-splits1 = data.train_test_split(test_size=0.1, seed=42)
-del data
-
-train = splits1['train']
-test = splits1['test']
-# save the test set for later evaluation
-test.save_to_disk('pickles/merged_dataset/arabic_portuguese/test_high_reverse')
-del test
-del splits1
-# split the train set to train and validation sets (80% from 40000 train, 10% from 40000 validation) randomly
-splits2 = train.train_test_split(test_size=0.115, seed=42)
-train = splits2['train']
-validation = splits2['test']
-del splits2
-
+# train = train.select(range(100))
+# validation = validation.select(range(10))
 
 def extract_all_chars(batch):
     all_text = " ".join(batch["sentence"])
@@ -79,12 +62,12 @@ print(f'Vocab_len: {len(vocab_dict)}')
 print("----------------- Preparing vocab complete. -----------------\n\n")
 
 print("----------------- Saving vocab to jason... -----------------")
-with open('vocab/arabic_portu_high_reverse.json', 'w') as vocab_file:
+with open('vocab/russian_portu_high.json', 'w') as vocab_file:
     json.dump(vocab_dict, vocab_file)
 
 print("----------------- Saving vocab to jason complete. -----------------\n\n")
 
-tokenizer = Wav2Vec2CTCTokenizer("./vocab/arabic_portu_high_reverse.json", unk_token="[UNK]", pad_token="[PAD]",
+tokenizer = Wav2Vec2CTCTokenizer("./vocab/russian_portu_high.json", unk_token="[UNK]", pad_token="[PAD]",
                                  word_delimiter_token="|")
 
 feature_extractor = Wav2Vec2FeatureExtractor(feature_size=1, sampling_rate=16000, padding_value=0.0, do_normalize=True,
@@ -109,15 +92,15 @@ validation = validation.map(prepare_dataset, remove_columns=validation.column_na
 print("\n\n----------------- Preparing datasets complete. -----------------\n\n")
 
 print("----------------- saving datasets... -----------------")
-train.save_to_disk('pickles/merged_dataset/arabic_portuguese/train_high_reverse')
-validation.save_to_disk('pickles/merged_dataset/arabic_portuguese/validation_high_reverse')
+train.save_to_disk('pickles/merged_dataset/russian_portuguese/high/train')
+validation.save_to_disk('pickles/merged_dataset/russian_portuguese/high/validation')
 print("----------------- saving datasets complete. -----------\n\n")
 
 
 # #  Loading from file
 # print("----------------- Loading Datasets... -----------------")
-# train = load_from_disk('pickles/merged_dataset/arabic_portuguese/train_high_reverse')
-# validation = load_from_disk('pickles/merged_dataset/arabic_portuguese/validation_high_reverse')
+# train = load_from_disk('pickles/merged_dataset/russian_portuguese/high/train')
+# validation = load_from_disk('pickles/merged_dataset/russian_portuguese/high/validation')
 # print("----------------- Loading Datasets complete. ----------\n\n")
 @dataclass
 class DataCollatorCTCWithPadding:
@@ -235,7 +218,7 @@ training_args = TrainingArguments(
     evaluation_strategy="steps",
     num_train_epochs=10,
     fp16=True,
-    save_steps=248,  # change to num_of_samples / batch size to save on epoch
+    save_steps=625,  # change to num_of_samples / batch size to save on epoch
     eval_steps=100,
     logging_steps=10,
     learning_rate=3e-4,
@@ -243,22 +226,6 @@ training_args = TrainingArguments(
     save_total_limit=10,
     report_to='tensorboard'
 )
-# training_args = TrainingArguments(
-#     output_dir="arabic_portuguese_high",
-#     group_by_length=True,
-#     per_device_train_batch_size=2,  # if cuda is out of memory try decreasing batch size by half
-#     gradient_accumulation_steps=2,
-#     evaluation_strategy="steps",
-#     num_train_epochs=10,
-#     fp16=True,
-#     save_steps=3982,  # change to num_of_samples / batch size to save on epoch
-#     eval_steps=100,
-#     logging_steps=10,
-#     learning_rate=3e-4,
-#     warmup_steps=500,
-#     save_total_limit=10,
-#     report_to='tensorboard'
-# )
 
 trainer = Trainer(
     model=model,
@@ -277,4 +244,3 @@ print("----------------- Training complete. -----------------\n\n")
 
 writer.close()
 # To run the tensorboard run the following command in the folder containing the checkpoints: tensorboard --logdir=runs
-

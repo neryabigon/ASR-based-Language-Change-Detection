@@ -42,8 +42,8 @@ df_test = df_test[df_test['cos_sim'] >= 0.58]
 # get 40000 random pairs
 print("Sampling dataset at random...")
 df = df.sample(n=10000, random_state=1)
-df_validation = df_validation.sample(n=1000, random_state=1)
-df_test = df_test.sample(n=1000, random_state=1)
+df_validation = df_validation.sample(n=2000, random_state=1)
+df_test = df_test.sample(n=2000, random_state=1)
 
 # load the sentences
 df_ru_sentences = pd.read_pickle('pickles/embedding/russian/russian_train.pickle')
@@ -144,7 +144,7 @@ def append_path_test(example):
 
 dataset = dataset.map(append_path)
 dataset_validation = dataset_validation.map(append_path_validation)
-dataset_test = dataset_test.map(append_path_test)
+# dataset_test = dataset_test.map(append_path_test)
 
 # drop the column 'cos_sim'
 print("Dropping column 'cos_sim'...")
