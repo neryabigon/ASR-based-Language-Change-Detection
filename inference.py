@@ -4,8 +4,6 @@ import torchaudio
 from datasets import load_dataset, Audio, load_from_disk, Features, Value, Dataset
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor
 from datasets import load_metric
-import re
-import pyarabic.araby as araby
 from unidecode import unidecode
 
 print("----------------- Checking if cuda is available... -----------------")
@@ -15,11 +13,8 @@ DEVICE = "cuda"
 wer = load_metric("wer")
 cer = load_metric("cer")
 
-# LANG_ID = "ru"
-# DATASET = "mozilla-foundation/common_voice_11_0"
-# #
 print('---------------- Loading Data... ---------------------')
-test = load_from_disk('pickles/merged_dataset/arabic_portuguese/test_high_reverse')
+test = load_from_disk('pickles/merged_dataset/spanish_portuguese/high/test')
 print('---------------- Loading Data complete. ---------------------\n\n')
 # small dataset for testing purposes only (10 samples)
 # test_dataset = test.select(range(10))
@@ -27,17 +22,16 @@ test_dataset = test
 
 print('---------------- Loading processor and model... ---------------------')
 
-tokenizer = Wav2Vec2CTCTokenizer("./vocab/arabic_portu_high_reverse.json", unk_token="[UNK]",
+tokenizer = Wav2Vec2CTCTokenizer("./vocab/spanish_portuguese_low.json", unk_token="[UNK]",
                                  pad_token="[PAD]", word_delimiter_token="|")
 feature_extractor = Wav2Vec2FeatureExtractor(feature_size=1, sampling_rate=16000, padding_value=0.0, do_normalize=True,
                                              return_attention_mask=True)
 processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
 
-model = Wav2Vec2ForCTC.from_pretrained('arabic_portuguese_high_reverse/checkpoint-2480')
+model = Wav2Vec2ForCTC.from_pretrained('spanish_portuguese_low/checkpoint-6250')
 model.to('cuda')
 print('---------------- Loading processor and model complete. ---------------------\n\n')
 
-# resampler = torchaudio.transforms.Resample(48_000, 16_000)
 
 def prepare_dataset(batch):
     audio = batch["audio"]
@@ -45,25 +39,12 @@ def prepare_dataset(batch):
     batch["speech"] = processor(audio, sampling_rate=16000).input_values[0]
     # print(batch["speech"])
     return batch
-#
-#
-# print("----------------- Preparing datasets... -----------------")
-# train = train.map(prepare_dataset, remove_columns=train.column_names, num_proc=4)
-
-# Preprocessing the datasets.
-# We need to read the audio files as arrays
-# def speech_file_to_array_fn(batch):
-#     speech_array = processor(batch["audio"], sampling_rate=16_000).input_values[0]
-#     # speech_array = batch['audio']
-#
-#     batch["speech"] = resampler(speech_array).squeeze().numpy()
-#     return batch
 
 
-# print('---------------- Processing the data... ---------------------')
-# test_dataset = test_dataset.map(speech_file_to_array_fn)
+print('---------------- Processing the data... ---------------------')
+
 test_dataset = test_dataset.map(prepare_dataset)
-# print('---------------- Processing the data complete. ---------------------\n\n')
+print('---------------- Processing the data complete. ---------------------\n\n')
 # print('---------------- Saving dataset to disk... ---------------------')
 # test_dataset.save_to_disk('/home/or/Desktop/rus/current/test')
 # print('---------------- Saving dataset to disk complete. ---------------------\n\n')
@@ -95,14 +76,13 @@ print('\n---------------- Inferencing... ---------------------')
 
 def evaluate(batch):
     inputs = processor(batch["audio"], sampling_rate=16_000, return_tensors="pt", padding=True)
-    # print(inputs)
 
     with torch.no_grad():
         logits = model(inputs.input_values.to(DEVICE), attention_mask=inputs.attention_mask.to(DEVICE)).logits
 
     pred_ids = torch.argmax(logits, dim=-1)
     batch["pred_strings"] = processor.batch_decode(pred_ids)
-    # print(batch["pred_strings"])
+
     return batch
 
 
@@ -114,6 +94,8 @@ print("----------------- evaluating complete. -----------------\n\n")
 
 predicted_sentences = [x[0] for x in result["pred_strings"]]
 references = [x for x in result["sentence"]]
+
+
 # predicted_sentences = predicted_sentences[:-1]  # only for arabic because the samples are not aligned
 # references = references[1:]  # only for arabic because the samples are not aligned
 
@@ -172,9 +154,9 @@ for i, predicted_sentence in enumerate(predicted_sentences):
     results_wer.append(result_wer)
 
 num_of_bad_sample_wer = 0
-num_of_sample_wer = 10
+num_of_sample_wer = 2000
 num_of_bad_sample_cer = 0
-num_of_sample_cer = 10
+num_of_sample_cer = 2000
 
 for i in results_cer:
     if i >= 1.0:
