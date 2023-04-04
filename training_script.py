@@ -15,20 +15,16 @@ from torch.utils.tensorboard import SummaryWriter
 from unidecode import unidecode
 
 # the writer is responsible for tensorboard logging
-writer = SummaryWriter(comment="_spanish_portuguese_low")
+writer = SummaryWriter(comment="_spanish_portuguese_high_augmented")
 
 print("----------------- Checking if cuda is available... -----------------")
 print(f'Cuda Available = {torch.cuda.is_available()}\n\n')
 
 print("----------------- Loading Datasets complete. -----------------")
-train = load_from_disk('pickles/merged_dataset/spanish_portuguese/low/train')
-validation = load_from_disk('pickles/merged_dataset/spanish_portuguese/low/validation')
+train = load_from_disk('pickles/merged_dataset/spanish_portuguese/high/augmented/train')
+validation = load_from_disk('pickles/merged_dataset/spanish_portuguese/high/validation')
 print("----------------- Loading Datasets complete. -----------------\n")
 
-#remove columns that are not needed
-
-# train = train.remove_columns(['__index_level_0__'])
-# validation = validation.remove_columns(['__index_level_0__'])
 
 # small dataset for testing purposes only (10 samples)
 # train = train.select(range(100))
@@ -66,12 +62,12 @@ print(f'Vocab_len: {len(vocab_dict)}')
 print("----------------- Preparing vocab complete. -----------------\n\n")
 
 print("----------------- Saving vocab to jason... -----------------")
-with open('vocab/spanish_portuguese_low.json', 'w') as vocab_file:
+with open('vocab/spanish_portuguese_high_augmented.json', 'w') as vocab_file:
     json.dump(vocab_dict, vocab_file)
 
 print("----------------- Saving vocab to jason complete. -----------------\n\n")
 
-tokenizer = Wav2Vec2CTCTokenizer("./vocab/spanish_portuguese_low.json", unk_token="[UNK]", pad_token="[PAD]",
+tokenizer = Wav2Vec2CTCTokenizer("./vocab/spanish_portuguese_high_augmented.json", unk_token="[UNK]", pad_token="[PAD]",
                                  word_delimiter_token="|")
 
 feature_extractor = Wav2Vec2FeatureExtractor(feature_size=1, sampling_rate=16000, padding_value=0.0, do_normalize=True,
@@ -94,6 +90,7 @@ print("----------------- Preparing datasets... -----------------")
 train = train.map(prepare_dataset, remove_columns=train.column_names, num_proc=4)  # maybe we'll have to reduce to 1
 validation = validation.map(prepare_dataset, remove_columns=validation.column_names, num_proc=4)
 print("\n\n----------------- Preparing datasets complete. -----------------\n\n")
+
 
 # print("----------------- saving datasets... -----------------")
 # train.save_to_disk('pickles/merged_dataset/spanish_portuguese/ready/low/train')
@@ -215,14 +212,14 @@ model.freeze_feature_encoder()
 model.gradient_checkpointing_enable()
 
 training_args = TrainingArguments(
-    output_dir="spanish_portuguese_low",
+    output_dir="spanish_portuguese_high_augmented",
     group_by_length=True,
     per_device_train_batch_size=8,  # if cuda is out of memory try decreasing batch size by half
     gradient_accumulation_steps=2,
     evaluation_strategy="steps",
     num_train_epochs=10,
     fp16=True,
-    save_steps=625,  # change to num_of_samples / batch size to save on epoch
+    save_steps=761,  # change to num_of_samples / batch size in order to save on epoch
     eval_steps=100,
     logging_steps=10,
     learning_rate=3e-4,
@@ -239,6 +236,7 @@ trainer = Trainer(
     train_dataset=train,
     eval_dataset=validation,
     tokenizer=processor.feature_extractor,
+
 )
 print("----------------- Training... -----------------")
 trainer.train()
